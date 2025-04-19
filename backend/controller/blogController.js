@@ -1,5 +1,6 @@
 const Blog = require("../models/Blog");
 const jwt = require("jsonwebtoken");
+const cloudinary = require("cloudinary").v2;
 
 exports.getBlogs = async (req, res) => {
   const blogs = await Blog.find();
@@ -14,15 +15,14 @@ exports.getBlog = async (req, res) => {
 exports.createBlog = async (req, res) => {
   try {
     const token = req.headers.authorization?.split(" ")[1];
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET); // use your actual secret
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decoded.id;
 
     const blog = new Blog({
       title: req.body.title,
       content: req.body.content,
-      imageUrl: req.file ? `/uploads/${req.file.filename}` : null,
-      createdBy: userId, // 🔥 This connects the blog to the user
+      imageUrl: req.file ? req.file.path : null, // Cloudinary provides the URL in req.file.path
+      createdBy: userId,
     });
 
     await blog.save();
@@ -36,8 +36,13 @@ exports.createBlog = async (req, res) => {
 exports.updateBlog = async (req, res) => {
   try {
     const { title, content, imageUrl: oldImageUrl } = req.body;
+    const imageUrl = req.file ? req.file.path : oldImageUrl;
 
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : oldImageUrl;
+    // If there's a new image and an old image exists, delete the old image from Cloudinary
+    if (req.file && oldImageUrl) {
+      const publicId = oldImageUrl.split("/").pop().split(".")[0];
+      await cloudinary.uploader.destroy(publicId);
+    }
 
     const updatedBlog = await Blog.findByIdAndUpdate(
       req.params.id,
@@ -57,9 +62,23 @@ exports.updateBlog = async (req, res) => {
 };
 
 exports.deleteBlog = async (req, res) => {
-  await Blog.findByIdAndDelete(req.params.id);
-  res.json({ message: "Blog deleted" });
+  try {
+    const blog = await Blog.findById(req.params.id);
+
+    // If the blog has an image, delete it from Cloudinary
+    if (blog.imageUrl) {
+      const publicId = blog.imageUrl.split("/").pop().split(".")[0];
+      await cloudinary.uploader.destroy(publicId);
+    }
+
+    await Blog.findByIdAndDelete(req.params.id);
+    res.json({ message: "Blog deleted" });
+  } catch (error) {
+    console.error("Error deleting blog:", error);
+    res.status(500).json({ error: "Server error" });
+  }
 };
+
 exports.likeBlog = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
@@ -70,6 +89,7 @@ exports.likeBlog = async (req, res) => {
     res.status(500).json({ error: "Error liking blog" });
   }
 };
+
 exports.unlikeBlog = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
@@ -80,30 +100,29 @@ exports.unlikeBlog = async (req, res) => {
     res.status(500).json({ error: "Error liking blog" });
   }
 };
+
 exports.addComment = async (req, res) => {
   const { text } = req.body;
-
-  const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
-  const userId = req.user.id; // Access the user ID from req.user
+  const imageUrl = req.file ? req.file.path : null;
+  const userId = req.user.id;
 
   try {
     const blog = await Blog.findById(req.params.id);
-
-    // Add the comment to the blog with the createdBy field
     blog.comments.push({
       text,
       imageUrl,
       createdAt: new Date(),
-      createdBy: userId, // Attach the user ID who is creating the comment
+      createdBy: userId,
     });
 
     await blog.save();
-    res.status(200).json(blog); // Send back the updated blog
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error adding comment" });
+    res.json(blog);
+  } catch (error) {
+    console.error("Error adding comment:", error);
+    res.status(500).json({ error: "Server error" });
   }
 };
+
 exports.addviews = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
