@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
+const storage = require("../config/cloudinary");
 const {
   getServices,
   createService,
@@ -8,7 +9,7 @@ const {
   deleteService,
 } = require("../controller/serviceController");
 
-const upload = multer({ dest: "uploads/" });
+const upload = multer({ storage: storage });
 
 router.get("/", getServices);
 router.post("/", upload.single("image"), createService);
