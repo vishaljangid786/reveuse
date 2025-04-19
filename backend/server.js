@@ -1,12 +1,12 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const jwt = require('jsonwebtoken')
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
+const jwt = require("jsonwebtoken");
 
-require('dotenv').config();
+require("dotenv").config();
 
-const blogRoutes = require('./routes/blogRoutes');
-const serviceRoutes = require('./routes/serviceRoute');
+const blogRoutes = require("./routes/blogRoutes");
+const serviceRoutes = require("./routes/serviceRoute");
 
 const app = express();
 
@@ -16,9 +16,8 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/uploads", express.static("uploads"));
 
-
-app.use('/api/blogs', blogRoutes);
-app.use('/api/services', serviceRoutes);
+app.use("/api/blogs", blogRoutes);
+app.use("/api/services", serviceRoutes);
 
 app.get("/", (req, res) => {
   res.send("🚀 API is working!");
@@ -38,11 +37,9 @@ app.post("/api/users/login", (req, res) => {
 
   if (email === staticEmail && password === staticPassword) {
     // Create token
-    const token = jwt.sign(
-      { email },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN }
-    );
+    const token = jwt.sign({ email }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES_IN,
+    });
 
     // Send token in cookie or JSON response
     res.status(200).json({ message: "Login successful", token });
@@ -50,7 +47,6 @@ app.post("/api/users/login", (req, res) => {
     res.status(401).json({ message: "Invalid email or password" });
   }
 });
-
 
 exports.isAuthenticated = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -70,9 +66,33 @@ exports.isAuthenticated = (req, res, next) => {
   }
 };
 
-mongoose.connect(process.env.MONGO_URI).then(() => {
-  console.log('MongoDB connected');
-  app.listen(process.env.PORT || 5000, () => {
-    console.log(`Server running on port ${process.env.PORT || 5000}`);
-  });
-}).catch(err => console.error(err));
+let cachedDb = null;
+
+const connectToDatabase = async () => {
+  if (cachedDb) {
+    return cachedDb;
+  }
+
+  try {
+    const db = await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    cachedDb = db;
+    console.log("MongoDB connected");
+    return db;
+  } catch (error) {
+    console.error("MongoDB connection error:", error);
+    throw error;
+  }
+};
+
+module.exports = async (req, res) => {
+  try {
+    await connectToDatabase();
+    return app(req, res);
+  } catch (error) {
+    console.error("Server error:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
