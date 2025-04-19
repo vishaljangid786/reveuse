@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
+import { backendurl } from "../App";
 import { useNavigate } from "react-router-dom";
 
 const Login = () => {
@@ -14,7 +15,7 @@ const Login = () => {
     e.preventDefault();
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/users/login",
+        `${backendurl}/api/users/login`,
         {
           email,
           password,

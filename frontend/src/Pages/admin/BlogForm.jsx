@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import Heading from "../../components/Heading";
+import { backendurl } from "../../App";
 
 const BlogForm = () => {
   const [title, setTitle] = useState("");
@@ -37,7 +38,7 @@ const BlogForm = () => {
     if (image) formData.append("image", image);
 
     try {
-      await axios.post("http://localhost:5000/api/blogs", formData, {
+      await axios.post(`${backendurl}/api/blogs`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
           Authorization: `Bearer ${token}`,

@@ -17,7 +17,6 @@ import NewService from './Pages/admin/NewService.jsx'
 
 export const backendurl = "http://localhost:5000";
 
-
 const App = () => {
   return (
     <BrowserRouter>
