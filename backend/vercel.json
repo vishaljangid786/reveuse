@@ -2,14 +2,18 @@
   "version": 2,
   "builds": [
     {
-      "src": "server.js",
+      "src": "package.json",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "server.js"
+      "dest": "/"
     }
-  ]
+  ],
+  "framework": "nodejs",
+  "env": {
+    "NODE_ENV": "production"
+  }
 }
