@@ -8,6 +8,7 @@ const BlogForm = () => {
   const [content, setContent] = useState("");
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [error, setError] = useState(null);
 
   const isLoggedIn = () => {
     const token = localStorage.getItem("token");
@@ -26,9 +27,11 @@ const BlogForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
+
     const token = isLoggedIn();
     if (!token) {
-      alert("You must be logged in to create a blog!");
+      setError("You must be logged in to create a blog!");
       return;
     }
 
@@ -38,29 +41,44 @@ const BlogForm = () => {
     if (image) formData.append("image", image);
 
     try {
-      await axios.post(`${backendurl}/api/blogs`, formData, {
+      const response = await axios.post(`${backendurl}/api/blogs`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
           Authorization: `Bearer ${token}`,
         },
+        withCredentials: true,
       });
 
-      alert("Blog created successfully!");
-      setTitle("");
-      setContent("");
-      setImage(null);
-      setImagePreview(null);
+      if (response.status === 201) {
+        alert("Blog created successfully!");
+        setTitle("");
+        setContent("");
+        setImage(null);
+        setImagePreview(null);
+      }
     } catch (err) {
       console.error("Error creating blog:", err);
-      alert("Failed to create blog. Please try again.");
+      setError(
+        err.response?.data?.error || "Failed to create blog. Please try again."
+      );
     }
   };
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="max-w-md mx-auto mt-10 p-6 bg-white rounded-2xl shadow-lg space-y-4">
+      className="max-w-md mx-auto mt-10 p-6 bg-white rounded-2xl shadow-lg space-y-4"
+    >
       <Heading text1={"Create"} text2={"Blog"} />
+
+      {error && (
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+          role="alert"
+        >
+          <span className="block sm:inline">{error}</span>
+        </div>
+      )}
 
       <input
         type="text"
@@ -68,6 +86,7 @@ const BlogForm = () => {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        required
       />
 
       <textarea
@@ -76,6 +95,7 @@ const BlogForm = () => {
         value={content}
         onChange={(e) => setContent(e.target.value)}
         className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        required
       />
 
       <input
@@ -95,7 +115,8 @@ const BlogForm = () => {
 
       <button
         type="submit"
-        className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-all">
+        className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-all"
+      >
         Create Blog
       </button>
     </form>

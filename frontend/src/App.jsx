@@ -15,7 +15,7 @@ import AdminLayout from './Pages/AdminLayout.jsx'
 import AllBlog from './Pages/admin/AllBlog.jsx'
 import NewService from './Pages/admin/NewService.jsx'
 
-export const backendurl = "http://localhost:5000";
+export const backendurl = "https://reveuse-backend.vercel.app";
 
 const App = () => {
   return (
