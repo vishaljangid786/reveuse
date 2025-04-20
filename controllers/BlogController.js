@@ -1,7 +1,6 @@
 const Blog = require("../models/Blog");
 const jwt = require("jsonwebtoken");
-const cloudinary = require("../config/cloudinary"); // Adjust the path as needed
-const fs = require("fs");
+const cloudinary = require("../config/cloudinary");
 
 exports.getBlogs = async (req, res) => {
   const blogs = await Blog.find();
@@ -15,19 +14,26 @@ exports.getBlog = async (req, res) => {
 
 exports.createBlog = async (req, res) => {
   try {
-
     let imageUrl = null;
 
     // Upload image to Cloudinary if present
     if (req.file) {
-      const uploadResult = await cloudinary.uploader.upload(req.file.path, {
-        folder: "blogs",
-      });
+      try {
+        // Convert buffer to base64
+        const b64 = Buffer.from(req.file.buffer).toString("base64");
+        let dataURI = "data:" + req.file.mimetype + ";base64," + b64;
 
-      imageUrl = uploadResult.secure_url;
+        // Upload to Cloudinary
+        const uploadResult = await cloudinary.uploader.upload(dataURI, {
+          folder: "blogs",
+          resource_type: "auto",
+        });
 
-      // Optional: Delete local file after uploading to Cloudinary
-      fs.unlinkSync(req.file.path);
+        imageUrl = uploadResult.secure_url;
+      } catch (uploadError) {
+        console.error("Cloudinary upload error:", uploadError);
+        throw new Error(`Failed to upload image: ${uploadError.message}`);
+      }
     }
 
     const blog = new Blog({
@@ -40,7 +46,10 @@ exports.createBlog = async (req, res) => {
     res.status(201).json(blog);
   } catch (err) {
     console.error("Error creating blog:", err);
-    res.status(400).json({ error: "Failed to create blog." });
+    res.status(400).json({
+      error: "Failed to create blog.",
+      details: err.message,
+    });
   }
 };
 
@@ -50,24 +59,30 @@ exports.updateBlog = async (req, res) => {
     let imageUrl = oldImageUrl;
 
     if (req.file) {
-      // Upload new image to Cloudinary
-      const uploadResult = await cloudinary.uploader.upload(req.file.path, {
-        folder: "blogs",
-      });
-      imageUrl = uploadResult.secure_url;
+      try {
+        // Convert buffer to base64
+        const b64 = Buffer.from(req.file.buffer).toString("base64");
+        let dataURI = "data:" + req.file.mimetype + ";base64," + b64;
 
-      // Delete local file after uploading
-      fs.unlinkSync(req.file.path);
+        // Upload new image to Cloudinary
+        const uploadResult = await cloudinary.uploader.upload(dataURI, {
+          folder: "blogs",
+          resource_type: "auto",
+        });
+        imageUrl = uploadResult.secure_url;
 
-      // Delete old image from Cloudinary if exists
-      if (oldImageUrl && oldImageUrl.includes("res.cloudinary.com")) {
-        const publicId = oldImageUrl
-          .split("/")
-          .slice(-2)
-          .join("/")
-          .split(".")[0]; // Extract folder/filename
-
-        await cloudinary.uploader.destroy(publicId);
+        // Delete old image from Cloudinary if exists
+        if (oldImageUrl && oldImageUrl.includes("res.cloudinary.com")) {
+          const publicId = oldImageUrl
+            .split("/")
+            .slice(-2)
+            .join("/")
+            .split(".")[0];
+          await cloudinary.uploader.destroy(publicId);
+        }
+      } catch (uploadError) {
+        console.error("Cloudinary upload error:", uploadError);
+        throw new Error(`Failed to upload image: ${uploadError.message}`);
       }
     }
 
@@ -87,7 +102,6 @@ exports.updateBlog = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
-
 
 exports.deleteBlog = async (req, res) => {
   try {
@@ -159,7 +173,6 @@ exports.addComment = async (req, res) => {
     console.error("Error adding comment:", error);
     res.status(500).json({ error: "Server error" });
   }
-
 };
 
 exports.addviews = async (req, res) => {
