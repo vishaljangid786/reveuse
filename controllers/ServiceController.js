@@ -90,6 +90,21 @@ const updateService = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
+const getSingleService = async (req, res) => {
+  try {
+    const service = await Service.findById(req.params.id);
+
+    if (!service) {
+      return res.status(404).json({ error: "Service not found" });
+    }
+
+    res.json(service);
+  } catch (error) {
+    console.error("Error fetching service:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
 
 
 const deleteService = async (req, res) => {
@@ -118,6 +133,7 @@ const deleteService = async (req, res) => {
 module.exports = {
   getServices,
   createService,
+  getSingleService,
   updateService,
   deleteService,
 };
