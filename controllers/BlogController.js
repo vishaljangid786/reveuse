@@ -1,6 +1,6 @@
 const Blog = require("../models/Blog");
 const jwt = require("jsonwebtoken");
-const cloudinary = require("../config/cloudinary");
+const { cloudinary } = require("../config/cloudinary");
 
 exports.getBlogs = async (req, res) => {
   const blogs = await Blog.find();
@@ -56,47 +56,44 @@ exports.createBlog = async (req, res) => {
 exports.updateBlog = async (req, res) => {
   try {
     const { title, content, imageUrl: oldImageUrl } = req.body;
-    let imageUrl = oldImageUrl;
+    const blog = await Blog.findById(req.params.id);
 
-    if (req.file) {
-      try {
-        // Convert buffer to base64
-        const b64 = Buffer.from(req.file.buffer).toString("base64");
-        let dataURI = "data:" + req.file.mimetype + ";base64," + b64;
-
-        // Upload new image to Cloudinary
-        const uploadResult = await cloudinary.uploader.upload(dataURI, {
-          folder: "blogs",
-          resource_type: "auto",
-        });
-        imageUrl = uploadResult.secure_url;
-
-        // Delete old image from Cloudinary if exists
-        if (oldImageUrl && oldImageUrl.includes("res.cloudinary.com")) {
-          const publicId = oldImageUrl
-            .split("/")
-            .slice(-2)
-            .join("/")
-            .split(".")[0];
-          await cloudinary.uploader.destroy(publicId);
-        }
-      } catch (uploadError) {
-        console.error("Cloudinary upload error:", uploadError);
-        throw new Error(`Failed to upload image: ${uploadError.message}`);
-      }
-    }
-
-    const updatedBlog = await Blog.findByIdAndUpdate(
-      req.params.id,
-      { title, content, imageUrl },
-      { new: true }
-    );
-
-    if (!updatedBlog) {
+    if (!blog) {
       return res.status(404).json({ error: "Blog not found" });
     }
 
-    res.json(updatedBlog);
+    // Update title and content
+    blog.title = title || blog.title;
+    blog.content = content || blog.content;
+
+    // Only update image if a new one is provided
+    if (req.file) {
+      // Delete old image from Cloudinary if it exists
+      if (blog.imageUrl) {
+        try {
+          const publicId = blog.imageUrl.split("/").pop().split(".")[0];
+          await cloudinary.uploader.destroy(publicId);
+        } catch (error) {
+          console.error("Error deleting old image:", error);
+          // Continue with the update even if old image deletion fails
+        }
+      }
+
+      // Convert buffer to base64
+      const b64 = Buffer.from(req.file.buffer).toString("base64");
+      let dataURI = "data:" + req.file.mimetype + ";base64," + b64;
+
+      // Upload new image to Cloudinary
+      const result = await cloudinary.uploader.upload(dataURI, {
+        folder: "blogs",
+        resource_type: "auto",
+      });
+
+      blog.imageUrl = result.secure_url;
+    }
+
+    await blog.save();
+    res.json(blog);
   } catch (error) {
     console.error("Error updating blog:", error);
     res.status(500).json({ error: "Server error" });
@@ -109,8 +106,13 @@ exports.deleteBlog = async (req, res) => {
 
     // If the blog has an image, delete it from Cloudinary
     if (blog.imageUrl) {
-      const publicId = blog.imageUrl.split("/").pop().split(".")[0];
-      await cloudinary.uploader.destroy(publicId);
+      try {
+        const publicId = blog.imageUrl.split("/").pop().split(".")[0];
+        await cloudinary.uploader.destroy(publicId);
+      } catch (error) {
+        console.error("Error deleting image:", error);
+        // Continue with the deletion even if image deletion fails
+      }
     }
 
     await Blog.findByIdAndDelete(req.params.id);
@@ -145,25 +147,28 @@ exports.unlikeBlog = async (req, res) => {
 
 exports.addComment = async (req, res) => {
   const { text } = req.body;
-  const imageUrl = req.file ? req.file.path : null;
 
   try {
     let cloudinaryImageUrl = null;
 
     // If an image is uploaded, upload it to Cloudinary
-    if (imageUrl) {
-      const uploadResponse = await cloudinary.uploader.upload(imageUrl, {
-        folder: "comments_images", // Optional: You can specify a folder for the images
+    if (req.file) {
+      // Convert buffer to base64
+      const b64 = Buffer.from(req.file.buffer).toString("base64");
+      let dataURI = "data:" + req.file.mimetype + ";base64," + b64;
+
+      const uploadResponse = await cloudinary.uploader.upload(dataURI, {
+        folder: "comments_images",
+        resource_type: "auto",
       });
-      cloudinaryImageUrl = uploadResponse.secure_url; // Get the Cloudinary URL of the image
+      cloudinaryImageUrl = uploadResponse.secure_url;
     }
 
     const blog = await Blog.findById(req.params.id);
 
-    // Add comment with or without image
     blog.comments.push({
       text,
-      imageUrl: cloudinaryImageUrl, // Use the Cloudinary image URL
+      imageUrl: cloudinaryImageUrl,
       createdAt: new Date(),
     });
 
@@ -180,10 +185,10 @@ exports.addviews = async (req, res) => {
     const blog = await Blog.findById(req.params.id);
     if (!blog) return res.status(404).json({ message: "Blog not found" });
 
-    blog.views += 1; // Increment view count
+    blog.views += 1;
     await blog.save();
 
-    res.status(200).json(blog); // Send the updated blog data back to the client
+    res.status(200).json(blog);
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Server error" });

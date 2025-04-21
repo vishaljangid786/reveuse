@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const connectDB = require("./config/db");
 const blogRoutes = require("./routes/BlogRoutes");
+const serviceRoutes = require("./routes/ServiceRoute");
 const bodyParser = require("body-parser");
 const jwt = require("jsonwebtoken");
 
@@ -30,6 +31,7 @@ app.use(bodyParser.json());
 
 // Routes
 app.use("/api/blogs", blogRoutes);
+app.use("/api/services", serviceRoutes);
 
 app.post("/api/users/login", (req, res) => {
   const { email, password } = req.body;

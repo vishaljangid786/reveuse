@@ -1,7 +1,8 @@
 require("events").EventEmitter.defaultMaxListeners = 15;
 
 const Service = require("../models/Service");
-const cloudinary = require("cloudinary").v2;
+const { cloudinary } = require("../config/cloudinary");
+const fs = require("fs");
 
 const getServices = async (req, res) => {
   try {
@@ -15,48 +16,81 @@ const getServices = async (req, res) => {
 
 const createService = async (req, res) => {
   try {
-    const service = new Service({
-      title: req.body.title,
-      description: req.body.description,
-      imageUrl: req.file ? req.file.path : null,
-      price: req.body.price,
-    });
+    let imageUrl = null;
 
-    await service.save();
-    res.status(201).json(service);
+    if (req.file) {
+      // Convert buffer to base64
+      const b64 = Buffer.from(req.file.buffer).toString("base64");
+      const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+
+      // Upload the image to Cloudinary
+      const result = await cloudinary.uploader.upload(dataURI, {
+        folder: "services",
+        resource_type: "auto",
+      });
+
+      imageUrl = result.secure_url;
+
+      // Create and save the service
+      const service = new Service({
+        title: req.body.title,
+        description: req.body.description,
+        imageUrl: imageUrl,
+      });
+
+      await service.save();
+      return res.status(201).json(service);
+    } else {
+      return res.status(400).json({ error: "No image file uploaded" });
+    }
   } catch (error) {
     console.error("Error creating service:", error);
     res.status(400).json({ error: "Failed to create service." });
   }
 };
 
+
 const updateService = async (req, res) => {
   try {
-    const { title, description, price, imageUrl: oldImageUrl } = req.body;
-    const imageUrl = req.file ? req.file.path : oldImageUrl;
+    const { title, description } = req.body;
+    const service = await Service.findById(req.params.id);
 
-    // If there's a new image and an old image exists, delete the old image from Cloudinary
-    if (req.file && oldImageUrl) {
-      const publicId = oldImageUrl.split("/").pop().split(".")[0];
-      await cloudinary.uploader.destroy(publicId);
-    }
-
-    const updatedService = await Service.findByIdAndUpdate(
-      req.params.id,
-      { title, description, price, imageUrl },
-      { new: true }
-    );
-
-    if (!updatedService) {
+    if (!service) {
       return res.status(404).json({ error: "Service not found" });
     }
 
-    res.json(updatedService);
+    // Update text fields
+    service.title = title || service.title;
+    service.description = description || service.description;
+
+    if (req.file) {
+      // Delete old image if it exists
+      if (service.imageUrl && service.imageUrl.includes("res.cloudinary.com")) {
+        const publicId = service.imageUrl.split("/").slice(-2).join("/").split(".")[0];
+        await cloudinary.uploader.destroy(publicId);
+      }
+
+      // Convert file buffer to base64
+      const b64 = Buffer.from(req.file.buffer).toString("base64");
+      const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+
+      // Upload to Cloudinary
+      const result = await cloudinary.uploader.upload(dataURI, {
+        folder: "services",
+        resource_type: "auto",
+      });
+
+      service.imageUrl = result.secure_url;
+    }
+
+    await service.save();
+    res.json(service);
   } catch (error) {
     console.error("Error updating service:", error);
     res.status(500).json({ error: "Server error" });
   }
 };
+
 
 const deleteService = async (req, res) => {
   try {
@@ -64,8 +98,13 @@ const deleteService = async (req, res) => {
 
     // If the service has an image, delete it from Cloudinary
     if (service.imageUrl) {
-      const publicId = service.imageUrl.split("/").pop().split(".")[0];
-      await cloudinary.uploader.destroy(publicId);
+      try {
+        const publicId = service.imageUrl.split("/").pop().split(".")[0];
+        await cloudinary.uploader.destroy(publicId);
+      } catch (error) {
+        console.error("Error deleting image:", error);
+        // Continue with the deletion even if image deletion fails
+      }
     }
 
     await Service.findByIdAndDelete(req.params.id);
