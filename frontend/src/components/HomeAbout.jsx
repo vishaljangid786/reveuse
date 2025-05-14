@@ -1,5 +1,5 @@
 import React from "react";
-import img1 from "../assets/homeabout.jpg";
+import img1 from "../assets/homeabout.webp";
 import Heading from "./Heading";
 import { Link } from "react-router-dom";
 

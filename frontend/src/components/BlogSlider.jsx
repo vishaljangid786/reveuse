@@ -1,35 +1,44 @@
 import React, { useRef, useEffect, useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Pagination, EffectFade, Navigation, Autoplay } from "swiper/modules";
-import Testimonials from "../components/Testimonials.jsx";
-
+import { Navigation, Autoplay } from "swiper/modules";
 import "swiper/css";
-import "swiper/css/effect-fade";
-import "swiper/css/pagination";
 import "swiper/css/navigation";
 import { Link } from "react-router-dom";
 import Heading from "./Heading";
-
-const slides = [
+const steps = [
   {
-    date: "26 December 2019",
-    title: "Lorem Ipsum Dolor",
-    text: "Lorem ipsum dolor sit amet consectetur, adipisicing elit. Recusandae voluptate repellendus magni illo ea animi?",
-    img: "https://res.cloudinary.com/muhammederdem/image/upload/q_60/v1535759872/kuldar-kalvik-799168-unsplash.webp",
+    icon: <i className="fas fa-globe text-blue-600 text-3xl"></i>,
+    step: "01",
+    title: "Make An Inquiry",
+    desc: "Reach out to us with your project idea or requirements to get started.",
   },
   {
-    date: "27 December 2019",
-    title: "Lorem Ipsum Dolor 2",
-    text: "Lorem ipsum dolor sit amet consectetur, adipisicing elit. Recusandae voluptate repellendus magni illo ea animi?",
-    img: "https://res.cloudinary.com/muhammederdem/image/upload/q_60/v1535759871/jason-leung-798979-unsplash.webp",
+    icon: <i className="fas fa-comments text-blue-600 text-3xl"></i>,
+    step: "02",
+    title: "Discuss With The Manager",
+    desc: "Talk with our expert manager to understand your goals and suggest tailored strategies.",
   },
   {
-    date: "28 December 2019",
-    title: "Lorem Ipsum Dolor 3",
-    text: "Lorem ipsum dolor sit amet consectetur, adipisicing elit. Recusandae voluptate repellendus magni illo ea animi?",
-    img: "https://res.cloudinary.com/muhammederdem/image/upload/q_60/v1535759871/alessandro-capuzzi-799180-unsplash.webp",
+    icon: <i className="fas fa-users text-blue-600 text-3xl"></i>,
+    step: "03",
+    title: "Meet and Choose Your Team",
+    desc: "Select your dedicated team from a pool of experienced professionals ready to collaborate.",
+  },
+  {
+    icon: <i className="fas fa-file-signature text-blue-600 text-3xl"></i>,
+    step: "04",
+    title: "Sign the Contract",
+    desc: "Finalize agreements and timelines by signing a transparent and flexible contract.",
+  },
+  {
+    icon: <i className="fas fa-rocket text-blue-600 text-3xl"></i>,
+    step: "05",
+    title: "Work Together",
+    desc: "Begin the journey as we work hand-in-hand to bring your vision to life efficiently.",
   },
 ];
+
+
 
 const BlogSlider = () => {
   const prevRef = useRef(null);
@@ -42,13 +51,23 @@ const BlogSlider = () => {
 
   return (
     <div className="overflow-hidden">
-      <Heading text1="HOW TO START WITH " text2="THE REVEUSE SOLUTION" />
+      <Heading text1="HOW TO START WITH" text2="THE REVEUSE SOLUTION" />
       <div className="relative max-w-6xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         {isSwiperReady && (
           <Swiper
-            modules={[Pagination, EffectFade, Navigation, Autoplay]}
-            effect="fade"
+            modules={[Navigation, Autoplay]}
             loop={true}
+            slidesPerView={1}
+            spaceBetween={20}
+            autoplay={{
+              delay: 5000,
+              disableOnInteraction: false,
+            }}
+            breakpoints={{
+              640: { slidesPerView: 1 },
+              768: { slidesPerView: 2 },
+              1024: { slidesPerView: 3 },
+            }}
             navigation={{
               prevEl: prevRef.current,
               nextEl: nextRef.current,
@@ -59,47 +78,20 @@ const BlogSlider = () => {
               swiper.navigation.init();
               swiper.navigation.update();
             }}
-            autoplay={{
-              delay: 5000,
-              disableOnInteraction: false,
-            }}
-            pagination={{
-              clickable: true,
-              el: ".blog-slider__pagination",
-            }}>
-            {slides.map((slide, index) => (
+          >
+            {steps.map((step, index) => (
               <SwiperSlide key={index}>
-                <div className="flex flex-col md:flex-row bg-white border border-gray-200 shadow-lg rounded-xl overflow-hidden w-full">
-                  <div className="w-full md:w-1/2 h-64 md:h-[450px]">
-                    <img
-                      src={slide.img}
-                      alt={slide.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="w-full md:w-1/2 p-6 flex flex-col justify-center text-center md:text-left">
-                    <span className="text-gray-500 text-sm mb-2">
-                      {slide.date}
-                    </span>
-                    <h2 className="text-2xl sm:text-3xl font-semibold mb-4">
-                      {slide.title}
-                    </h2>
-                    <p className="text-gray-600 mb-6">{slide.text}</p>
-                    <Link to="/about" className="inline-block">
-                      <button className="group relative overflow-hidden bg-blue-500 text-white px-6 py-2 rounded hover:bg-transparent border-2 border-blue-500 hover:text-blue-500 transition duration-300 transform hover:scale-105">
-                        <span className="inline-block transition-all duration-300 group-hover:pr-6">
-                          Learn More
-                        </span>
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 translate-x-2 transition-all duration-300">
-                          →
-                        </span>
-                      </button>
-                    </Link>
-                  </div>
+                <div className="bg-gray-100 p-8 rounded-xl text-center mulish hover:shadow-lg transition">
+                  <div className="text-4xl mb-4">{step.icon}</div>
+                  <h3 className="text-xl font-semibold mb-2">{step.step}</h3>
+                  <h2 className="text-2xl font-bold mb-4">{step.title}</h2>
+                  <p className="text-gray-600 mb-6">{step.desc}</p>
+                  <Link to="/about" className="text-blue-500 hover:underline">
+                    Read More
+                  </Link>
                 </div>
               </SwiperSlide>
             ))}
-            <div className="blog-slider__pagination mt-6 text-center" />
           </Swiper>
         )}
 
@@ -137,8 +129,6 @@ const BlogSlider = () => {
           </svg>
         </button>
       </div>
-
-      <Testimonials />
     </div>
   );
 };

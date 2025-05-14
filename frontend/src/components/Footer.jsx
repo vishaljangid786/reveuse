@@ -4,7 +4,8 @@ import {
   faInstagram,
   faLinkedin,
 } from "@fortawesome/free-brands-svg-icons";
-import logo from "../assets/logo.png";
+import logo from "../assets/logo.webp";
+import {Link} from "react-router-dom";
 
 export default function Footer() {
   return (
@@ -30,13 +31,15 @@ export default function Footer() {
             Head Office
           </h3>
           <p className="text-sm text-gray-300 leading-relaxed">
-            Udaipur, Rajasthan, <br />
+            Nathdwara (Rajasthan),
+            <br />
             INDIA
           </p>
           <h3 className="text-lg font-semibold mt-4 mb-1 text-blue-400">
             Contact
           </h3>
           <p className="text-sm text-gray-300">info@thereveuse.com</p>
+          <p className="text-sm text-gray-300">+91 9530104044</p>
         </div>
 
         {/* Quick Links */}
@@ -46,25 +49,25 @@ export default function Footer() {
           </h3>
           <ul className="space-y-2 text-sm">
             <li>
-              <a
-                href="/services"
+              <Link
+                to="/services"
                 className="hover:text-blue-300 transition duration-200">
                 Services
-              </a>
+              </Link>
             </li>
             <li>
-              <a
-                href="/about"
+              <Link
+                to="/about"
                 className="hover:text-blue-300 transition duration-200">
                 About Us
-              </a>
+              </Link>
             </li>
             <li>
-              <a
-                href="/contact"
+              <Link
+                to="/contact"
                 className="hover:text-blue-300 transition duration-200">
                 Contact
-              </a>
+              </Link>
             </li>
           </ul>
         </div>
@@ -75,13 +78,23 @@ export default function Footer() {
             Follow Us
           </h3>
           <div className="flex justify-center sm:justify-start space-x-5 text-2xl mt-3">
-            <a href="#" aria-label="X" className="hover:text-blue-300">
+            <a
+              href="https://x.com/TheRevesuse?t=e-z6s6mesftsPdZby7PVcw&s=09"
+              aria-label="X"
+              target="_blank"
+              className="hover:text-blue-300">
               <FontAwesomeIcon icon={faXTwitter} />
             </a>
-            <a href="#" aria-label="Instagram" className="hover:text-pink-400">
+            <a
+              href="https://www.instagram.com/the.reveusesolution?igsh=ZXJ0aXVzYmRhZ2Nv"
+              aria-label="Instagram"
+              className="hover:text-pink-400">
               <FontAwesomeIcon icon={faInstagram} />
             </a>
-            <a href="#" aria-label="LinkedIn" className="hover:text-blue-500">
+            <a
+              href="https://www.linkedin.com/in/kamlesh-dangi-749a84276?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app"
+              aria-label="LinkedIn"
+              className="hover:text-blue-500">
               <FontAwesomeIcon icon={faLinkedin} />
             </a>
           </div>

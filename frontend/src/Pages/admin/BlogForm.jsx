@@ -4,44 +4,76 @@ import Heading from "../../components/Heading";
 import { backendurl } from "../../App";
 
 const BlogForm = () => {
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [image, setImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [error, setError] = useState(null);
+  const [formData, setFormData] = useState({
+    title: "",
+    content: "",
+    image: null,
+  });
+  const [preview, setPreview] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [dragActive, setDragActive] = useState(false);
 
-  const isLoggedIn = () => {
-    const token = localStorage.getItem("token");
-    return token ? token : null;
+  const isLoggedIn = () => localStorage.getItem("token");
+
+  const handleChange = (e) => {
+    const { name, value, files } = e.target;
+    if (name === "image" && files.length > 0) {
+      handleImage(files[0]);
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    setImage(file);
-    if (file) {
-      setImagePreview(URL.createObjectURL(file));
-    } else {
-      setImagePreview(null);
+  const handleImage = (file) => {
+    setFormData((prev) => ({ ...prev, image: file }));
+    setPreview(URL.createObjectURL(file));
+  };
+
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleImage(e.dataTransfer.files[0]);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
+    setLoading(true);
+    setMessage("");
 
     const token = isLoggedIn();
     if (!token) {
-      setError("You must be logged in to create a blog!");
+      setMessage("You must be logged in to create a blog.");
+      setLoading(false);
       return;
     }
 
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("content", content);
-    if (image) formData.append("image", image);
+    const data = new FormData();
+    data.append("title", formData.title);
+    data.append("content", formData.content);
+    if (formData.image) {
+      data.append("image", formData.image);
+    } else {
+      setMessage("Please upload an image.");
+      setLoading(false);
+      return;
+    }
 
     try {
-      const response = await axios.post(`${backendurl}/api/blogs`, formData, {
+      const response = await axios.post(`${backendurl}/api/blogs`, data, {
         headers: {
           "Content-Type": "multipart/form-data",
           Authorization: `Bearer ${token}`,
@@ -50,76 +82,108 @@ const BlogForm = () => {
       });
 
       if (response.status === 201) {
-        alert("Blog created successfully!");
-        setTitle("");
-        setContent("");
-        setImage(null);
-        setImagePreview(null);
+        setMessage("Blog created successfully!");
+        setFormData({ title: "", content: "", image: null });
+        setPreview(null);
       }
     } catch (err) {
-      console.error("Error creating blog:", err);
-      setError(
+      setMessage(
         err.response?.data?.error || "Failed to create blog. Please try again."
       );
+      console.error("Error creating blog:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="max-w-md mx-auto mt-10 p-6 bg-white rounded-2xl shadow-lg space-y-4"
-    >
-      <Heading text1={"Create"} text2={"Blog"} />
+    <div className="max-w-xl mx-auto p-6 bg-white shadow-2xl rounded-2xl mt-10">
+      <h2 className="text-2xl font-bold mb-4 text-center">
+        <Heading text1="Create" text2="Blog" />
+      </h2>
 
-      {error && (
-        <div
-          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
-          role="alert"
-        >
-          <span className="block sm:inline">{error}</span>
+      <form
+        onSubmit={handleSubmit}
+        onDragEnter={handleDrag}
+        onDragOver={handleDrag}
+        onDragLeave={handleDrag}
+        onDrop={handleDrop}
+        className="space-y-5">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Title
+          </label>
+          <input
+            type="text"
+            name="title"
+            placeholder="Enter blog title"
+            value={formData.title}
+            onChange={handleChange}
+            required
+            className="mt-1 w-full p-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
         </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Content
+          </label>
+          <textarea
+            name="content"
+            placeholder="Write your blog content here"
+            value={formData.content}
+            onChange={handleChange}
+            required
+            rows="6"
+            className="mt-1 w-full p-2 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Image
+          </label>
+          <div
+            className={`w-full p-6 border-2 border-dashed rounded-lg text-center transition ${
+              dragActive ? "border-blue-600 bg-blue-50" : "border-gray-400"
+            }`}>
+            <p className="mb-2 text-gray-500">
+              Drag & drop an image here, or{" "}
+              <span className="text-blue-600 underline">browse</span>
+            </p>
+            <label className="inline-block bg-gray-200 text-gray-800 px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-300 transition duration-200">
+              Choose File
+              <input
+                type="file"
+                name="image"
+                accept="image/*"
+                onChange={handleChange}
+                className="hidden"
+              />
+            </label>
+          </div>
+
+          {preview && (
+            <img
+              src={preview}
+              alt="Preview"
+              className="mt-4 rounded-lg w-full h-48 object-cover"
+            />
+          )}
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-300">
+          {loading ? "Creating..." : "Create Blog"}
+        </button>
+      </form>
+
+      {message && (
+        <p className="mt-4 text-center text-sm text-gray-600">{message}</p>
       )}
-
-      <input
-        type="text"
-        placeholder="Title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        required
-      />
-
-      <textarea
-        rows={8}
-        placeholder="Write your blog content here..."
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        required
-      />
-
-      <input
-        type="file"
-        accept="image/*"
-        onChange={handleImageChange}
-        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200"
-      />
-
-      {imagePreview && (
-        <img
-          src={imagePreview}
-          alt="Preview"
-          className="w-full h-auto rounded-lg border border-gray-300"
-        />
-      )}
-
-      <button
-        type="submit"
-        className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-all"
-      >
-        Create Blog
-      </button>
-    </form>
+    </div>
   );
 };
 

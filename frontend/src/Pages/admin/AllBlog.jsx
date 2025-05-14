@@ -2,11 +2,14 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { backendurl } from "../../App";
 import Heading from "../../components/Heading";
+import Loader from "../../components/Loader";
 
 const AllBlog = () => {
   const [blogs, setBlogs] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedBlog, setSelectedBlog] = useState(null);
+  const [loading, setLoading] = useState(true);
+
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -18,11 +21,14 @@ const AllBlog = () => {
   }, []);
 
   const fetchBlogs = () => {
+    setLoading(true);
     axios
       .get(`${backendurl}/api/blogs`)
       .then((res) => setBlogs(res.data))
-      .catch((err) => console.log(err));
+      .catch((err) => console.log(err))
+      .finally(() => setLoading(false));
   };
+
 
   const handleEditClick = (blog) => {
     setSelectedBlog(blog);
@@ -32,6 +38,23 @@ const AllBlog = () => {
       imageUrl: blog.imageUrl,
     });
     setIsModalOpen(true);
+  };
+
+  const handleDeleteClick = (blog) => {
+    // Confirm delete action
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this blog?"
+    );
+    if (confirmed) {
+      axios
+        .delete(`${backendurl}/api/blogs/${blog._id}`)
+        .then(() => {
+          fetchBlogs(); // Refresh the list of blogs after deletion
+        })
+        .catch((err) => {
+          console.error("Delete error:", err);
+        });
+    }
   };
 
   const handleUpdate = () => {
@@ -62,7 +85,6 @@ const AllBlog = () => {
       });
   };
 
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -72,7 +94,9 @@ const AllBlog = () => {
     <div className="max-w-5xl min-h-screen mx-auto px-4 py-10">
       <Heading text1={"All"} text2={"Blog"} />
 
-      {blogs.length > 0 ? (
+      {loading ? (
+        <Loader />
+      ) : blogs.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {blogs.map((blog) => (
             <div
@@ -80,7 +104,11 @@ const AllBlog = () => {
               className="bg-white shadow-md rounded-xl p-5 space-y-3">
               {blog.imageUrl && (
                 <img
-                  src={`${backendurl}${blog.imageUrl}`}
+                  src={
+                    blog.imageUrl.startsWith("http")
+                      ? blog.imageUrl
+                      : `${backendurl}${blog.imageUrl}`
+                  }
                   alt={blog.title}
                   className="w-full h-48 object-cover rounded-md"
                 />
@@ -97,11 +125,18 @@ const AllBlog = () => {
                 <span>📅 {new Date(blog.createdAt).toLocaleDateString()}</span>
               </div>
 
-              <button
-                className="text-green-600 hover:underline cursor-pointer"
-                onClick={() => handleEditClick(blog)}>
-                Edit
-              </button>
+              <div className="flex gap-2">
+                <button
+                  className="text-white-600 hover:bg-transparent bg-yellow-400 border-2 border-yellow-400  text-white px-4 rounded hover:text-yellow-400 transition cursor-pointer"
+                  onClick={() => handleEditClick(blog)}>
+                  Edit
+                </button>
+                <button
+                  className="bg-red-500 text-white border-2 border-red-500 hover:bg-transparent hover:text-red-500 px-4 rounded cursor-pointer"
+                  onClick={() => handleDeleteClick(blog)}>
+                  Delete
+                </button>
+              </div>
             </div>
           ))}
         </div>

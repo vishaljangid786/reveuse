@@ -27,7 +27,7 @@ const FAQ = () => {
                 <span
                   className={`${
                     isOpen ? "text-blue-600" : "text-gray-800"
-                  } transition-colors duration-300`}>
+                  } transition-colors mulish duration-300`}>
                   {faq.question}
                 </span>
                 <span
@@ -43,7 +43,7 @@ const FAQ = () => {
                     ? "max-h-60 opacity-100 py-4"
                     : "max-h-0 opacity-0 py-0"
                 } overflow-hidden text-gray-600`}>
-                <p className="transition-opacity duration-300">{faq.answer}</p>
+                <p className="transition-opacity mulish duration-300">{faq.answer}</p>
               </div>
             </div>
           );

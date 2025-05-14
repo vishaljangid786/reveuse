@@ -3,8 +3,11 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import { backendurl } from "../App";
 import EmojiPicker from "emoji-picker-react";
-import { formatDistanceToNow } from "date-fns"; // Importing date-fns
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { formatDistanceToNow } from "date-fns"; 
+import Loader from "../components/Loader";
+import { useNavigate } from "react-router-dom";
+import Seo from "../components/Seo";
+
 
 const BlogDetails = () => {
   const { id } = useParams();
@@ -13,19 +16,24 @@ const BlogDetails = () => {
   const [showEmoji, setShowEmoji] = useState(false);
   const [commentImage, setCommentImage] = useState(null);
   const [hasLiked, setHasLiked] = useState(false);
-
-  // State to toggle comments visibility
-  const [showComments, setShowComments] = useState(false);
+  const [notFound, setNotFound] = useState(false);
+  const [fullscreenImage, setFullscreenImage] = useState(null);
+  const navigate = useNavigate();
 
   const fetchBlog = async () => {
     try {
       const res = await axios.get(`${backendurl}/api/blogs/${id}`);
-      const blogData = res.data;
-      setBlog(blogData);
+      if (res.data) {
+        setBlog(res.data);
+      } else {
+        setNotFound(true);
+      }
     } catch (err) {
       console.log(err);
+      setNotFound(true); // Set not found on error
     }
   };
+
 
   useEffect(() => {
     // Update view count on backend each time the page is loaded or reloaded
@@ -101,26 +109,75 @@ const BlogDetails = () => {
     setCommentText((prev) => prev + emojiData.emoji);
   };
 
-  // Toggle comments visibility
-  const toggleComments = () => {
-    setShowComments(!showComments);
-  };
+  if (notFound) {
+    return (
+      <div className="text-center text-xl text-gray-600 mt-20">
+        🚫 No blog found.
+      </div>
+    );
+  }
 
-  if (!blog) return <p className="text-center mt-10">Loading blog...</p>;
+  if (!blog) {
+    return (
+      <Loader />
+    );
+  }
+
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10 space-y-6">
+    <div className="max-w-5xl mx-auto px-4 py-10 space-y-6">
+      <Seo
+        title={`${blog.title} – Reveuse Blog`}
+        description={blog.summary || blog.content.slice(0, 150)}
+        keywords={blog.tags?.join(", ")}
+        url={`https://www.thereveuse.com/blogs/${blog._id}`}
+        image={blog.thumbnail}
+      />
+
+      <button
+        onClick={() => navigate(-1)}
+        className="mb-4 text-blue-600 hover:underline">
+        ← Back
+      </button>
+
       {blog.imageUrl && (
-        <img
-          src={`${backendurl}${blog.imageUrl}`}
-          alt={blog.title}
-          className="w-full h-64 object-cover rounded-lg"
-        />
+        <div className="relative group">
+          <img
+            src={
+              blog.imageUrl.startsWith("http")
+                ? blog.imageUrl
+                : `${backendurl}${blog.imageUrl}`
+            }
+            alt={blog.title}
+            className="w-full object-cover rounded-lg cursor-pointer"
+            onClick={() =>
+              setFullscreenImage(
+                blog.imageUrl.startsWith("http")
+                  ? blog.imageUrl
+                  : `${backendurl}${blog.imageUrl}`
+              )
+            }
+          />
+          <button
+            onClick={() =>
+              setFullscreenImage(
+                blog.imageUrl.startsWith("http")
+                  ? blog.imageUrl
+                  : `${backendurl}${blog.imageUrl}`
+              )
+            }
+            className="absolute bottom-2 right-2 bg-black/60 text-white px-3 py-1 text-sm rounded-md opacity-0 group-hover:opacity-100 transition">
+            <i className="fa-solid fa-expand"></i>
+          </button>
+        </div>
       )}
+
       <h1 className="text-4xl font-extrabold text-gradient bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
         {blog.title}
       </h1>
-      <p className="text-lg text-gray-800">{blog.content}</p>
+      <p className="text-lg text-gray-800 whitespace-pre-line  mulish">
+        {blog.content}
+      </p>
 
       <div className="text-gray-600 text-sm flex flex-wrap gap-6 items-center mt-2">
         {/* Date */}
@@ -144,9 +201,7 @@ const BlogDetails = () => {
         </button>
 
         {/* Toggle Comments */}
-        <button
-          onClick={toggleComments}
-          className="flex items-center gap-2 text-gray-600 cursor-pointer">
+        <button className="flex items-center gap-2 text-gray-600 cursor-pointer">
           <i className="fa-regular fa-comment text-lg"></i>
           <span>{blog.comments?.length || 0} Comments</span>
         </button>
@@ -163,7 +218,7 @@ const BlogDetails = () => {
         <h2 className="text-2xl font-semibold mb-4">Leave a comment</h2>
         <form onSubmit={handleCommentSubmit} className="space-y-4">
           <textarea
-            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+            className="w-full p-3 border border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
             rows={3}
             placeholder="Write something awesome..."
             value={commentText}
@@ -220,42 +275,59 @@ const BlogDetails = () => {
           {/* Submit Button */}
           <button
             type="submit"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors duration-300 shadow-md hover:shadow-lg">
+            className="bg-blue-600 hover:text-blue-600  border-2 cursor-pointer border-blue-500 hover:bg-transparent  text-white px-6 py-2 rounded-lg font-semibold transition-colors duration-300 shadow-md hover:shadow-lg">
             💬 Post Comment
           </button>
         </form>
       </div>
-
-      {/* Conditional Rendering of Comments */}
-      {showComments && (
-        <div className="bg-white p-6 rounded-xl shadow-md space-y-5">
-          <h2 className="text-2xl font-semibold">Comments</h2>
-          {blog.comments
-            .filter((c) => (c.text && c.text.trim() !== "") || c.imageUrl)
-            .map((comment, idx) => (
-              <div
-                key={idx}
-                className="border-l-4 border-blue-500 bg-blue-50 p-4 rounded-lg shadow-sm">
-                {comment.text && (
-                  <p className="text-gray-800 text-base mb-2">{comment.text}</p>
-                )}
-                {comment.imageUrl && (
-                  <img
-                    src={`${backendurl}${comment.imageUrl}`}
-                    alt="Comment"
-                    className="w-32 h-auto rounded-md mb-2"
-                  />
-                )}
-                <div className="text-sm text-gray-500 italic">
-                  — {comment.userName || "User"} •{" "}
-                  {formatDistanceToNow(new Date(comment.createdAt), {
-                    addSuffix: true,
-                  })}
-                </div>
-              </div>
-            ))}
+      {fullscreenImage && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
+          <div className="relative max-w-6xl w-full mx-4">
+            <img
+              src={fullscreenImage}
+              alt="Full"
+              className="w-full max-h-[90vh] object-contain rounded-lg"
+            />
+            <button
+              onClick={() => setFullscreenImage(null)}
+              className="absolute top-4 right-4 bg-white text-black px-3 py-1 rounded-full shadow-md hover:bg-red-600 hover:text-white transition">
+              ✕
+            </button>
+          </div>
         </div>
       )}
+
+      {/* Conditional Rendering of Comments */}
+      <div className="bg-white p-6 rounded-xl shadow-md space-y-5">
+        <h2 className="text-2xl font-semibold">Comments</h2>
+        {blog.comments
+          .filter((c) => (c.text && c.text.trim() !== "") || c.imageUrl)
+          .map((comment, idx) => (
+            <div
+              key={idx}
+              className="border-l-4 border-blue-500 bg-blue-50 p-4 rounded-lg shadow-sm">
+              {comment.text && (
+                <p className="text-gray-800 text-base mb-2">{comment.text}</p>
+              )}
+
+              {comment.imageUrl && (
+                <img
+                  src={comment.imageUrl}
+                  alt="Comment"
+                  className="w-32 h-auto rounded-md mb-2 cursor-pointer"
+                  onClick={() => setFullscreenImage(comment.imageUrl)}
+                />
+              )}
+
+              <div className="text-sm text-gray-500 italic">
+                —
+                {formatDistanceToNow(new Date(comment.createdAt), {
+                  addSuffix: true,
+                })}
+              </div>
+            </div>
+          ))}
+      </div>
     </div>
   );
 };

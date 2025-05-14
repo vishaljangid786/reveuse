@@ -1,53 +1,39 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Heading from "./Heading";
-import Slider from "react-slick";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
-import { imagesCompanies } from "../assets/assets";
 import { motion } from "framer-motion";
-
-const NextArrow = ({ onClick }) => (
-  <div
-    className="absolute -bottom-12 right-0 z-10 cursor-pointer p-2 bg-blue-500 hover:bg-transparent hover:text-blue-500 border-2 transition duration-300 border-blue-500 text-white rounded-full"
-    onClick={onClick}>
-    <ChevronRight />
-  </div>
-);
-
-const PrevArrow = ({ onClick }) => (
-  <div
-    className="absolute -bottom-12  right-0 -translate-x-12 z-10 cursor-pointer p-2 bg-blue-500 hover:bg-transparent hover:text-blue-500 border-2 transition duration-300 border-blue-500 text-white rounded-full"
-    onClick={onClick}>
-    <ChevronLeft />
-  </div>
-);
+import axios from "axios";
+import { backendurl } from "../App";
+import Loader from "./Loader";
+import { Link } from "react-router-dom";
+import FeatureScroll from "./FeatureScroll";
 
 const CompaniesOverview = () => {
- const settings = {
-  infinite: true,
-  speed: 600,
-  slidesToShow: 3,
-  centerMode: true,
-  centerPadding: "80px",
-  autoplay: true,
-  autoplaySpeed: 3000, // 3 seconds
-  pauseOnHover: false, // Try false for testing
-  arrows: true,
-  nextArrow: <NextArrow />,
-  prevArrow: <PrevArrow />,
-  cssEase: "ease-in-out",
-  responsive: [
-    {
-      breakpoint: 768,
-      settings: {
-        slidesToShow: 1,
-        centerPadding: "40px",
-      },
-    },
-  ],
+  const [services, setServices] = useState([]);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [error, setError] = useState("");
+
+const fetchServices = async () => {
+  setLoading(true);
+  try {
+    const res = await axios.get(`${backendurl}/api/services`);
+    // Reverse the array to get descending order and take the first 6 items
+    const latestSix = res.data.slice().reverse().slice(0, 6);
+    setServices(latestSix);
+  } catch (err) {
+    console.error("Failed to fetch:", err);
+    setError("Failed to load services.");
+  } finally {
+    setLoading(false);
+  }
 };
 
+
+
+  useEffect(() => {
+    fetchServices(page);
+  }, []);
 
   return (
     <div>
@@ -56,25 +42,33 @@ const CompaniesOverview = () => {
         text2="Our Partners"
         toggle="company"
       />
-      <div className="relative max-w-6xl mx-auto px-4 py-12 mb-10 ">
-        <Slider {...settings}>
-          {imagesCompanies.map((img, index) => (
-            <div key={index} className="px-2">
-              <motion.div
-                className="h-64 rounded-xl overflow-hidden shadow-md"
-                whileHover={{ scale: 1.05 }}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, ease: "easeInOut" }}>
-                <img
-                  src={img}
-                  alt={`Slide ${index + 1}`}
-                  className="h-full w-full object-cover"
-                />
-              </motion.div>
-            </div>
-          ))}
-        </Slider>
+      <FeatureScroll />
+
+      <div className="scale-75">
+        <Heading text1="My" text2="Gallery" />
+      </div>
+
+      {loading && <Loader />}
+      {error && <p className="text-center text-red-500">{error}</p>}
+
+      <div className="max-w-6xl mx-auto px-4 py-12 mb-10 grid gap-8 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        {services.map((service, index) => (
+          <motion.div
+            key={service._id}
+            className="rounded-xl hover:scale-105 cursor-pointer overflow-hidden shadow-md hover:shadow-lg transition duration-300"
+            whileHover={{ scale: 1.05 }}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeInOut" }}>
+            <Link to="/services">
+              <img
+                src={service.imageUrl}
+                alt={`Service ${index + 1}`}
+                className="h-64 w-full object-cover"
+              />
+            </Link>
+          </motion.div>
+        ))}
       </div>
     </div>
   );

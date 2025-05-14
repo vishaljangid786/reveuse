@@ -22,7 +22,7 @@ const Heading = ({ text1, text2,toggle }) => {
         </p>
       )}
       {toggle === "company" && (
-        <p className="max-w-5xl mx-auto mt-4 text-xl text-gray-600">
+        <p className="max-w-5xl mx-auto mt-4 text-xl mulish text-gray-600">
           At The Reveuse Solution, excellence is our guiding principle. As a
           global leader in business process outsourcing, we leverage our diverse
           expertise and innovative approach to deliver tailored solutions that
